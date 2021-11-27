@@ -13,3 +13,9 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# VS Code Hidden Files to exclude
+.DS_Store
+
+# Location where I drop scratch files
+scratch_pad/

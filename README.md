@@ -7,6 +7,8 @@ A distributed append only commit log used for quick writes and reads to any scal
 - Purge json use in favor for protobufs
 - Wirte a log package which will be used for storing and looking up data
 
+[Part-1 Notes](assets/Part-1%20Notes.md)
+
 # Part 2 - Networking
 - Setup and server and client to to define actions via gRPC
 - Setup SSL/TLS to encrypt our data exchange between the client and the server
@@ -23,3 +25,7 @@ A distributed append only commit log used for quick writes and reads to any scal
 
 # Part 5 - Profits
 ![alt text](assets/underpants_gnomes.jpeg)
+
+
+# Technologies Used
+[Cosmik Air](https://github.com/cosmtrek/air) - ☁️ Live reload for Go apps
