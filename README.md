@@ -3,13 +3,13 @@ A distributed append only commit log used for quick writes and reads to any scal
 
 
 # Part 1 - Scaffolding
+[Part-1 Notes](assets/Part-1%20Notes.md)
 - Going to start off with building a simple Json over HTTP commit log
 - Purge json use in favor for protobufs
 - Wirte a log package which will be used for storing and looking up data
 
-[Part-1 Notes](assets/Part-1%20Notes.md)
-
 # Part 2 - Networking
+[Part-2 Notes](assets/Part-2%20Notes.md)
 - Setup and server and client to to define actions via gRPC
 - Setup SSL/TLS to encrypt our data exchange between the client and the server
 - Add in observibility...Metrics + Logs
