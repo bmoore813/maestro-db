@@ -20,7 +20,7 @@ A distributed append only commit log used for quick writes and reads to any scal
 - Load balancing
 
 # Part 4 - Deployment
-- Deploy codebase with Kubernetes locallay
+- Deploy codebase with Kubernetes locally
 - Add in terraform to deploy on GKE
 
 # Part 5 - Profits
@@ -29,3 +29,4 @@ A distributed append only commit log used for quick writes and reads to any scal
 
 # Technologies Used
 [Cosmik Air](https://github.com/cosmtrek/air) - ☁️ Live reload for Go apps
+[Evans Client](https://github.com/ktr0731/evans) - RPC client that allows you to construct and send requests to gRPC server in an interactive shell
