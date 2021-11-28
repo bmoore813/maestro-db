@@ -1,0 +1,9 @@
+# Location where I drop scratch files
+scratch_pad/
+
+# Remove readme.md asset since its not used for the app atm
+readme.md
+
+# Used for the readme.md
+assets/underpants_gnomes.jpeg
+
