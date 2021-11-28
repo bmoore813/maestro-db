@@ -1,5 +1,10 @@
 # Assumptions
 
+### Protobuf Compiler is installed:
+[Install Guide](InstallProtoCompiler.md)
+
+
+### API Design:
 We will only need two end points(handlers):
 
 1. `Produce`: For writing to the log
@@ -12,3 +17,4 @@ Steps for Handlers should be the same
 3. Marshal and write that result to the response
 
 **Any further complication in the handlers should be abstracted out**
+
