@@ -4,7 +4,39 @@ package log.v1;
 
 option go_package = "github.com/bmoore813/api/log_v1";
 
-message Record {
+// The service keyword says that this is a service for the compiler
+// to generate, and each rpc line is an endpoint in the service specifying
+//  the type of request and response
+service Log {
+    rpc Produce(ProduceRequest) returns (ProduceResponse) {}
+    rpc Consume(ConsumeRequest) returns (ConsumeResponse) {}
+    // Server side streaming end point where the consumer sends one 
+    // request to the server and gets back a stream of messages
+    rpc ConsumeStream(ConsumeRequest) returns (stream ConsumeResponse) {}
+    // Bi-directional streaming rpc where both the client and the server
+    // can send a sequence of messages using a read write stream. Each stream
+    // will operate independently so each can work in whatever order they'd like
+    rpc ProduceStream(stream ProduceRequest) returns (stream ProduceResponse) {}
+  }
+
+message ProduceRequest  {
+    Record record = 1;
+  }
+  
+  message ProduceResponse  {
+    uint64 offset = 1;
+  }
+  
+  message ConsumeRequest {
+    uint64 offset = 1;
+  }
+  
+  message ConsumeResponse {
+    Record record = 2;
+  }
+  
+  message Record {
     bytes value = 1;
     uint64 offset = 2;
-}
+  }
+  

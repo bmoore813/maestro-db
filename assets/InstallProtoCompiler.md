@@ -15,6 +15,8 @@ brew upgrade protobuf
 2. Specific to the project and installs the GO protobuf runtime. If we wanted to compile in more langues like python, javascript, java...etc we would need to install their runtimes as well
 ```sh
 go get google.golang.org/protobuf/...@v1.25.0
+go get google.golang.org/grpc@v1.32.0
+go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.0.0
 ```
 
 3. `zsh` is my default terminal command line tool. I want to make sure that `protoc-gen-go` can be accessed. You should be able to run `grep -R error $HOME/go/bin/protoc-gen-go` and get some output like `Binary file /Users/bmoore/go/bin/protoc-gen-go matches`. If it fails it should look something like `grep: /Users/bmoore/go/bin/protoc-gen-go: No such file or directory`
@@ -36,5 +38,3 @@ make compile-protos
 
 
 Refer to the [Official Protoc Installation Link](https://grpc.io/docs/protoc-installation/) if these steps didn't help
-
-
