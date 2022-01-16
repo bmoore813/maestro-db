@@ -19,3 +19,6 @@
 
 # Location where I drop scratch files
 scratch_pad/
+
+# CA Certs
+.maestro-db/

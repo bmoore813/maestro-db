@@ -1,42 +1,101 @@
+// START: types
 package server
 
 import (
 	"context"
 
 	api "github.com/bmoore813/maestro-db/api/v1"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 )
 
-type Config struct {
-	CommitLog CommitLog
+// type eaasServer struct {
+// 	eaas.UnimplementedEaasServer
+// }
+
+type maestroServer struct {
+	api.UnimplementedLogServer
 }
 
-var _ api.LogServer = (*grpcServer)(nil)
+func NewMeastroServer() *maestroServer {
+	return &maestroServer{}
+}
+
+// START: config_authorizer
+type Config struct {
+	CommitLog  CommitLog
+	Authorizer Authorizer
+}
+
+const (
+	objectWildcard = "*"
+	produceAction  = "produce"
+	consumeAction  = "consume"
+)
+
+// END: config_authorizer
 
 type grpcServer struct {
-	api.UnimplementedLogServer
 	*Config
 }
 
-func newgrpcServer(config *Config) (srv *grpcServer, err error) {
-	srv = &grpcServer{
+func newgrpcServer(config *Config) (*grpcServer, error) {
+	srv := &grpcServer{
 		Config: config,
 	}
 	return srv, nil
 }
 
-func NewGRPCServer(config *Config) (*grpc.Server, error) {
-	gsrv := grpc.NewServer()
-	srv, err := newgrpcServer(config)
+// START: newgrpcserver_before_auth
+// START: newgrpcserver
+func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (
+	*grpc.Server,
+	error,
+) {
+	// END: newgrpcserver_before_auth
+	opts = append(opts, grpc.StreamInterceptor(
+		grpc_middleware.ChainStreamServer(
+			grpc_auth.StreamServerInterceptor(authenticate),
+		)), grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+		grpc_auth.UnaryServerInterceptor(authenticate),
+	)))
+	// START: newgrpcserver_before_auth
+	gsrv := grpc.NewServer(opts...)
+	_, err := newgrpcServer(config)
 	if err != nil {
 		return nil, err
 	}
-	api.RegisterLogServer(gsrv, srv)
+	// api.RegisterLogServer(gsrv, api.LogServer{
+	// 	Produce:       srv.Produce,
+	// 	Consume:       srv.Consume,
+	// 	ConsumeStream: srv.ConsumeStream,
+	// 	ProduceStream: srv.ProduceStream,
+	// })
+	api.RegisterLogServer(gsrv, NewMeastroServer())
 	return gsrv, nil
 }
 
+// END: newgrpcserver
+// END: newgrpcserver_before_auth
+
+// START: request_response
+// START: produce_authorize
 func (s *grpcServer) Produce(ctx context.Context, req *api.ProduceRequest) (
 	*api.ProduceResponse, error) {
+	// START_HIGHLIGHT
+	if err := s.Authorizer.Authorize(
+		subject(ctx),
+		objectWildcard,
+		produceAction,
+	); err != nil {
+		return nil, err
+	}
+	// END_HIGHLIGHT
 	offset, err := s.CommitLog.Append(req.Record)
 	if err != nil {
 		return nil, err
@@ -44,8 +103,20 @@ func (s *grpcServer) Produce(ctx context.Context, req *api.ProduceRequest) (
 	return &api.ProduceResponse{Offset: offset}, nil
 }
 
+// END: produce_authorize
+
+// START: consume_authorize
 func (s *grpcServer) Consume(ctx context.Context, req *api.ConsumeRequest) (
 	*api.ConsumeResponse, error) {
+	// START_HIGHLIGHT
+	if err := s.Authorizer.Authorize(
+		subject(ctx),
+		objectWildcard,
+		consumeAction,
+	); err != nil {
+		return nil, err
+	}
+	// END_HIGHLIGHT
 	record, err := s.CommitLog.Read(req.Offset)
 	if err != nil {
 		return nil, err
@@ -53,9 +124,11 @@ func (s *grpcServer) Consume(ctx context.Context, req *api.ConsumeRequest) (
 	return &api.ConsumeResponse{Record: record}, nil
 }
 
-func (s *grpcServer) ProduceStream(
-	stream api.Log_ProduceStreamServer,
-) error {
+// END: consume_authorize
+// END: request_response
+
+// START: stream
+func (s *grpcServer) ProduceStream(stream api.Log_ProduceStreamServer) error {
 	for {
 		req, err := stream.Recv()
 		if err != nil {
@@ -71,7 +144,7 @@ func (s *grpcServer) ProduceStream(
 	}
 }
 
-func (s *grpcServer) ConsumeStream(
+func (s *maestroServer) ConsumeStream(
 	req *api.ConsumeRequest,
 	stream api.Log_ConsumeStreamServer,
 ) error {
@@ -83,7 +156,6 @@ func (s *grpcServer) ConsumeStream(
 			res, err := s.Consume(stream.Context(), req)
 			switch err.(type) {
 			case nil:
-			// TODO: Fix this
 			case api.ErrOffsetOutOfRange:
 				continue
 			default:
@@ -97,7 +169,51 @@ func (s *grpcServer) ConsumeStream(
 	}
 }
 
+// END: stream
+
+// START: commitlog
 type CommitLog interface {
 	Append(*api.Record) (uint64, error)
 	Read(uint64) (*api.Record, error)
 }
+
+// END: commitlog
+
+// START: authorizer
+type Authorizer interface {
+	Authorize(subject, object, action string) error
+}
+
+// END: authorizer
+
+// START: authenticate
+func authenticate(ctx context.Context) (context.Context, error) {
+	peer, ok := peer.FromContext(ctx)
+	if !ok {
+		return ctx, status.New(
+			codes.Unknown,
+			"couldn't find peer info",
+		).Err()
+	}
+
+	if peer.AuthInfo == nil {
+		return ctx, status.New(
+			codes.Unauthenticated,
+			"no transport security being used",
+		).Err()
+	}
+
+	tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
+	subject := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
+	ctx = context.WithValue(ctx, subjectContextKey{}, subject)
+
+	return ctx, nil
+}
+
+func subject(ctx context.Context) string {
+	return ctx.Value(subjectContextKey{}).(string)
+}
+
+type subjectContextKey struct{}
+
+// END: authenticate

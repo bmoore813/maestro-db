@@ -1,0 +1,16 @@
+{
+    "CN": "My Certificate Authority",
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "US",
+            "L": "FL",
+            "ST": "Saint Petersburg",
+            "O": "Brian Moore",
+            "OU": "Meastro Team"
+        }
+    ]
+}
